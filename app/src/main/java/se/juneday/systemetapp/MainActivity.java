@@ -2,6 +2,7 @@ package se.juneday.systemetapp;
 
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,17 +17,16 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
-import android.widget.Toast;
+
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
 import com.android.volley.toolbox.Volley;
-import java.net.URLDecoder;
+
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -53,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
   private ListView listView;
   private ArrayAdapter<Product> adapter;
   private List<String> types;
-  private Map<String, String> searchMap;
+//  private Map<String, String> searchMap;
 
   private void createFakedProducts() {
     products = new ArrayList<>();
@@ -95,9 +95,13 @@ public class MainActivity extends AppCompatActivity {
           long id /* The row id of the item that was clicked */) {
         Log.d(LOG_TAG, "item clicked, pos:" + position + " id: " + id);
         Product p = products.get(position);
-        Intent intent = new Intent(MainActivity.this, ProductActivity.class);
-        intent.putExtra("product", p);
-        startActivity(intent);
+//        Intent intent = new Intent(MainActivity.this, ProductActivity.class);
+  //      intent.putExtra("product", p);
+        String url = "https://www.systembolaget.se/dryck/" + p.type().toLowerCase().replace("ö","o") + "/" + p.name().toLowerCase().split(" ")[0] + "-" + p.nr();
+        Log.d(LOG_TAG, " url: " + url);
+        Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        startActivity(myIntent);
+        //        startActivity(intent);
       }
     });
   }
@@ -205,7 +209,6 @@ public class MainActivity extends AppCompatActivity {
         dialog.dismiss();
         // Create a map to pass to the search method
         // The map makes it easy to add more search parameters with no changes in method signatures
-        Map<String, String> arguments = new HashMap<>();
 
         // Add user supplied argument (if valid) to the map
 /*        addToMap(arguments, MIN_ALCO, valueFromView(viewInflated, R.id.min_alco_input));
@@ -220,8 +223,7 @@ public class MainActivity extends AppCompatActivity {
         viewCache.cacheValues(viewInflated);
 
         // Given the map, s earch for products and update the listview
-        searchProducts(arguments);
-        searchMap = arguments;
+        searchProducts(createMapFromView(viewInflated));
       }
     });
     builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
@@ -232,6 +234,22 @@ public class MainActivity extends AppCompatActivity {
       }
     });
     builder.show();
+  }
+
+  private Map<String, String> createMapFromView(View viewInflated) {
+    Map<String, String> arguments= new HashMap<>();
+    final Spinner spinner = (Spinner) viewInflated.findViewById(R.id.product_type);
+
+    addToMap(arguments, MIN_ALCO, valueFromView(viewInflated, R.id.min_alco_input));
+    addToMap(arguments, MAX_ALCO, valueFromView(viewInflated, R.id.max_alco_input));
+    addToMap(arguments, MIN_PRICE, valueFromView(viewInflated, R.id.min_price_input));
+    addToMap(arguments, MAX_PRICE, valueFromView(viewInflated, R.id.max_price_input));
+    addToMap(arguments, NAME, valueFromView(viewInflated, R.id.product_name));
+    if (!spinner.getSelectedItem().toString().equals("Alla")) {
+      arguments.put(TYPE, URLEncoder.encode(spinner.getSelectedItem().toString()));
+    }
+
+    return arguments;
   }
 
   private void searchProducts(Map<String, String> arguments) {
@@ -303,13 +321,24 @@ public class MainActivity extends AppCompatActivity {
     List<Product> productList = new ArrayList<>();
     for (int i = 0; i < array.length(); i++) {
       try {
+        Log.d(LOG_TAG, "jsonToProducts() i: " + i);
         JSONObject row = array.getJSONObject(i);
         String name = row.getString("name");
         double alcohol = row.getDouble("alcohol");
         double price = row.getDouble("price");
         int volume = row.getInt("volume");
+        int nr = row.getInt("nr");
+        String type = row.getString("product_group");
+        Log.d(LOG_TAG, "jsonToProducts() type: " + type);
 
-        Product m = new Product(name, alcohol, price, volume);
+        Product m = new Product.Builder().
+          name(name).
+                alcohol(alcohol).
+                price(price).
+                volume(volume).
+                type(type).
+                nr(nr).
+                build();
         productList .add(m);
         Log.d(LOG_TAG, " * " + m);
       } catch (JSONException e) {
@@ -321,10 +350,12 @@ public class MainActivity extends AppCompatActivity {
 
   private void initCache() {
     viewCache = new ViewStateCache();
-    viewCache.addPair(R.id.min_alco_input, null);
-    viewCache.addPair(R.id.max_alco_input, null);
-    viewCache.addPair(R.id.min_price_input, null);
-    viewCache.addPair(R.id.max_price_input, null);
+    viewCache.add(R.id.product_type, null);
+    viewCache.add(R.id.product_name, null);
+    viewCache.add(R.id.min_alco_input, null);
+    viewCache.add(R.id.max_alco_input, null);
+    viewCache.add(R.id.min_price_input, null);
+    viewCache.add(R.id.max_price_input, null);
   }
 
   private void initTypes() {

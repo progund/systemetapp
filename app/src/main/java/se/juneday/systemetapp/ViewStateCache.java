@@ -18,7 +18,7 @@ public class ViewStateCache {
     values = new HashMap<>();
   }
 
-  public void addPair(Integer id, Object value) {
+  public void add(Integer id, Object value) {
     values.put(id, value);
   }
 
@@ -30,12 +30,12 @@ public class ViewStateCache {
       Log.d(LOG_TAG, "useValue()");
       if (view instanceof Spinner) {
         Spinner spinner = (Spinner) view;
-        Integer id = (Integer) values.get(viewId);
+        Long id = (Long) values.get(viewId);
         if (id == null) {
           return;
         }
-        spinner.setSelection(id);
         Log.d(LOG_TAG, "useValue() spinner: " + spinner + " " + id);
+        spinner.setSelection(id.intValue());
       } else if (view instanceof TextView) {
         TextView tv = (TextView) view;
         String s = (String) values.get(viewId);
@@ -57,26 +57,28 @@ public class ViewStateCache {
   }
 
   public void cacheValues(View inflater) {
+    Log.d(LOG_TAG, "cacheValues()   ");
 
     for (Map.Entry<Integer, Object> entry : values.entrySet()) {
+      Log.d(LOG_TAG, "cacheValues()   * " + entry);
       int viewId = entry.getKey();
       View view = inflater.findViewById(viewId);
-      Log.d(LOG_TAG, "readValue()");
+      Log.d(LOG_TAG, "cacheValues()   * view: " + view.getClass().getName());
       if (view instanceof Spinner) {
         Spinner spinner = (Spinner) view;
         Object o = spinner.getSelectedItemId();
-        addPair(viewId, o);
-        Log.d(LOG_TAG, "readValue() spinner: " + o);
+        add(viewId, o);
+        Log.d(LOG_TAG, " * cacheValues() spinner: " + o);
       } else if (view instanceof TextView) {
         TextView tv = (TextView) view;
         String t = (String) tv.getText().toString();
-        addPair(viewId, t);
-        Log.d(LOG_TAG, "readValue() textview: " + t);
+        add(viewId, t);
+        Log.d(LOG_TAG, " * cacheValues() textview: " + t);
       } else if (view instanceof EditText) {
         EditText ev = (EditText) view;
         String t = (String) ev.getText().toString();
-        addPair(viewId, t);
-        Log.d(LOG_TAG, "readValue() edittext: " + t);
+        add(viewId, t);
+        Log.d(LOG_TAG, " * cacheValues() edittext: " + t);
       } else {
         Log.d(LOG_TAG, " *** uh oh, not supporting type: " + view.getClass().getCanonicalName());
       }
